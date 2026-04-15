@@ -6,20 +6,22 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import br.com.brunomateus.todolist.R
 
 @Composable
 fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: () -> Unit, modifier: Modifier = Modifier) {
     AlertDialog(
         title = {
-            Text(text = "Adicionar tarefa")
+            Text(text = stringResource(R.string.add_task_dialog_title))
         },
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
                 onClick = onConfirm
             ) {
-                Text(text = "Adicionar")
+                Text(text = stringResource(R.string.add_task_confirm))
             }
         },
         modifier = modifier,
@@ -27,7 +29,7 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: () -> Unit, modifier: Modifi
             TextButton(
                 onClick = onDismiss
             ) {
-                Text(text = "Cancelar")
+                Text(text = stringResource(R.string.add_task_cancel))
             }
         },
         text = {
@@ -35,10 +37,10 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: () -> Unit, modifier: Modifi
                 TextField(
                     value = "",
                     label = {
-                        Text(text = "Descrição:")
+                        Text(text = stringResource(R.string.add_task_description_label))
                     },
                     placeholder = {
-                        Text("Digite a sua tarefa")
+                        Text(stringResource(R.string.add_task_description_placeholder))
                     },
                     onValueChange = {}
                 )

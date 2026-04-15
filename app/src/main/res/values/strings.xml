@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">TodoList</string>
+    <string name="add_task_dialog_title">Adicionar tarefa</string>
+    <string name="add_task_confirm">Adicionar</string>
+    <string name="add_task_cancel">Cancelar</string>
+    <string name="add_task_description_label">Descrição:</string>
+    <string name="add_task_description_placeholder">Digite a sua tarefa</string>
+    <string name="add_button">Adicionar</string>
+    <string name="add_task_fab_content_description">Botão para adicionar tarefa</string>
+    <string name="preview_task_description">Tarefa de exemplo</string>
 </resources>
