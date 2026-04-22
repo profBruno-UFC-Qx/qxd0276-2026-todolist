@@ -2,81 +2,80 @@
 
 Este projeto é uma aplicação de lista de tarefas (TodoList) desenvolvida para fins educacionais, focada em ensinar o desenvolvimento Android moderno com Jetpack Compose de forma progressiva para alunos de graduação.
 
-## 🚀 Conceitos Abordados
+## 🚀 Conceitos e Boas Práticas
 
-Nesta etapa inicial do projeto, o foco principal é o **Gerenciamento de Estado (State Management)** no Jetpack Compose.
+Nesta etapa do projeto, avançamos do gerenciamento de estado simples para técnicas mais refinadas e padrões recomendados pela Google.
 
-### 1. Estado Simples com `mutableStateOf` e `remember`
-
-O Jetpack Compose é uma ferramenta declarativa. Para que a interface mude, não alteramos os componentes diretamente; alteramos o **estado** que os descreve.
-
-No componente `TodoItem`, utilizamos `mutableStateOf` para criar um estado observável e `remember` para garantir que o valor sobreviva às recomposições do componente:
+### 1. Estado Simples e Reatividade
+O Jetpack Compose é declarativo. Para que a interface mude, alteramos o **estado** que a descreve usando `mutableStateOf` e `remember`.
 
 ```kotlin
 @Composable
 fun TodoItem(task: Task, modifier: Modifier = Modifier) {
     // Estado interno para controlar se o checkbox está marcado
     var checked by remember { mutableStateOf(task.done) }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-    ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = { checked = it } // Ao mudar, o estado atualiza e a UI reflete a mudança
-        )
-        Text(text = task.description)
-    }
+    // ...
+    Checkbox(checked = checked, onCheckedChange = { checked = it })
 }
 ```
 
-### 2. Listas Dinâmicas com `mutableStateListOf`
+### 2. Estados Derivados com `derivedStateOf` (Performance)
+Uma das melhores práticas em Compose é evitar cálculos desnecessários durante a recomposição. Usamos o `derivedStateOf` quando um estado é calculado a partir de outros estados.
 
-Para que uma lista (como o `LazyColumn`) seja atualizada automaticamente quando adicionamos ou removemos itens, precisamos de uma lista que o Compose consiga observar.
+No nosso caso, a lista filtrada depende da lista original de tarefas e das categorias selecionadas. O filtro só é reprocessado se uma dessas dependências mudar:
 
 ```kotlin
-@Composable
-fun TodoMainScreen(modifier: Modifier = Modifier) {
-    // mutableStateListOf notifica o Compose quando a lista sofre alterações (add/remove)
-    val todos = remember { mutableStateListOf(*tasks.toTypedArray()) }
-
-    LazyColumn(...) {
-        items(todos, key = { it.description }) { todo ->
-            TodoItem(todo)
+val filteredTodos by remember {
+    derivedStateOf {
+        if (selectedCategories.isEmpty()) {
+            todos.toList()
+        } else {
+            todos.filter { it.category.name in selectedCategories }
         }
     }
 }
 ```
 
-### 3. Controle de Visibilidade de Diálogos
-
-O estado também é usado para controlar elementos de navegação e interface, como diálogos de entrada de dados. No projeto, usamos uma variável booleana para decidir se o `AddTaskDialog` deve ser exibido:
+### 3. State Hoisting (Elevação de Estado)
+Para tornar os componentes mais "puros", reutilizáveis e fáceis de testar, aplicamos o **State Hoisting**. O componente `TodoMainScreen` não decide sozinho quando o diálogo abre ou fecha; ele recebe esse estado e as funções de callback do seu pai (`TodoListScaffold`).
 
 ```kotlin
-var showDialog by remember { mutableStateOf(false) }
+@Composable
+fun TodoMainScreen(
+    dialogIsVibile: Boolean, // Estado elevado
+    toggleDialog: () -> Unit, // Evento elevado
+    modifier: Modifier = Modifier
+) { ... }
+```
 
-// Botão que "abre" o dialog
-Button(onClick = { showDialog = true }) { ... }
+### 4. Otimização de Listas com `key` e `animateItem`
+Ao trabalhar com listas dinâmicas no `LazyColumn`, é fundamental usar o parâmetro `key`. Isso ajuda o Compose a identificar cada item de forma única (usando o `id` da `Task`), melhorando a performance e permitindo animações automáticas com `animateItem()`.
 
-// A visibilidade do componente é controlada pelo valor de showDialog
-AnimatedVisibility(visible = showDialog) {
-    AddTaskDialog(
-        onDismiss = { showDialog = false }, 
-        onConfirm = { showDialog = false }
-    )
+```kotlin
+items(
+    items = filteredTodos,
+    key = { it.id } // Uso de ID único em vez da posição ou descrição
+) { todo ->
+    TodoItem(todo, modifier = Modifier.animateItem())
 }
+```
+
+### 5. Extração de Recursos (Boas Práticas de UI)
+Evitamos o uso de textos fixos (*hardcoded strings*) diretamente no código Kotlin. Movemos todos os textos para o arquivo `res/values/strings.xml`, o que facilita a manutenção e permite a tradução do app futuramente.
+
+```kotlin
+// Forma correta de acessar textos
+Text(text = stringResource(R.string.add_button))
 ```
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-*   **Kotlin**: Linguagem oficial para Android.
-*   **Jetpack Compose**: Kit de ferramentas moderno para construir UI nativa.
-*   **Material 3**: Design system atualizado do Google.
-*   **Scaffold**: Componente que fornece a estrutura visual básica (TopBar, FAB, etc).
+*   **Kotlin**: Linguagem base com recursos como Enums e UUID.
+*   **Jetpack Compose**: `mutableStateListOf`, `mutableStateSetOf` e `derivedStateOf`.
+*   **Material 3**: Uso de `Scaffold`, `FloatingActionButton` e `MultiChoiceSegmentedButtonRow`.
 
 ## 📖 Como usar este repositório
 
-Este projeto foi estruturado para ser seguido passo a passo. Os alunos devem observar como os dados fluem da fonte de dados (`model/TaskRepositories.kt`) para a interface (`MainActivity.kt`) e como as interações do usuário modificam esses dados através do estado.
+Este projeto demonstra a evolução de uma UI estática para uma aplicação reativa. Os alunos devem focar em entender como o **fluxo de dados unidirecional** (Unidirectional Data Flow) funciona: o estado desce para os componentes e os eventos sobem para modificar o estado.

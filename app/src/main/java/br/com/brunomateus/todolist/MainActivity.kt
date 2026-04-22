@@ -8,29 +8,37 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.com.brunomateus.todolist.model.Category
 import br.com.brunomateus.todolist.model.Task
 import br.com.brunomateus.todolist.model.tasks
 import br.com.brunomateus.todolist.ui.AddTaskDialog
@@ -42,23 +50,33 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TodoListTheme {
-                Scaffold(
-                    floatingActionButton = { AddTaskFloatingButton() },
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-                    TodoMainScreen(
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                TodoListScaffold()
             }
         }
     }
 }
 
+
 @Composable
-fun AddTaskFloatingButton() {
+fun TodoListScaffold() {
+    var showDialog by remember { mutableStateOf(false) }
+    Scaffold(
+        floatingActionButton = { AddTaskFloatingButton({ showDialog = true }) },
+        modifier = Modifier.fillMaxSize()
+    ) { innerPadding ->
+        TodoMainScreen(
+            dialogIsVisible = showDialog,
+            toggleDialog = { showDialog = !showDialog },
+            modifier = Modifier.padding(innerPadding)
+        )
+    }
+}
+
+
+@Composable
+fun AddTaskFloatingButton(openDialog: () -> Unit) {
     FloatingActionButton(
-        onClick = { },
+        onClick = openDialog,
     ) {
         Icon(
             imageVector = Icons.Filled.Add,
@@ -67,41 +85,72 @@ fun AddTaskFloatingButton() {
     }
 }
 
-
 @Composable
-fun TodoMainScreen(modifier: Modifier = Modifier) {
+fun TodoMainScreen(dialogIsVisible: Boolean, toggleDialog: () -> Unit, modifier: Modifier = Modifier) {
     val todos = remember { mutableStateListOf(*tasks.toTypedArray()) }
-    var showDialog by remember { mutableStateOf(false) }
+    val selectedCategories = remember { mutableStateSetOf<String>() }
+
+    val filteredTodos by remember {
+        derivedStateOf {
+            if (selectedCategories.isEmpty()) {
+                todos.toList()
+            } else {
+                todos.filter { it.category.name in selectedCategories }
+            }
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-
-        Button(onClick = {
-            showDialog = true
-        }) {
-            Text(
-                text = stringResource(R.string.add_button),
-                fontSize = 24.sp
-            )
+        val sizeOfCategories = Category.values().size
+        MultiChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+        ) {
+            Category.values().forEachIndexed { index, category ->
+                val selected = selectedCategories.contains(category.name)
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = sizeOfCategories
+                    ),
+                    checked = selected,
+                    onCheckedChange = {
+                        val constantName = category.name
+                        if (it) selectedCategories.add(constantName) 
+                        else selectedCategories.remove(constantName)
+                    },
+                    label = {
+                        Text(text= category.label )
+                    },
+                    icon = { SegmentedButtonDefaults.Icon(selected) },
+                )
+            }
         }
-
-
         LazyColumn(
             horizontalAlignment = Alignment.Start,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(10.dp)
         ) {
-            items(todos, key = { it.description }) { todo ->
+            items(
+                items = filteredTodos,
+                key = { it.id }
+            ) { todo ->
                 TodoItem(todo, modifier = Modifier.animateItem())
             }
         }
     }
 
-    AnimatedVisibility(visible = showDialog) {
-        AddTaskDialog(onDismiss = { showDialog = false }, onConfirm = { showDialog = false })
+    AnimatedVisibility(visible = dialogIsVisible) {
+        AddTaskDialog(
+            onDismiss = toggleDialog,
+            onConfirm = { task ->
+                todos.add(task)
+                toggleDialog()
+            }
+        )
     }
 }
 
@@ -112,7 +161,20 @@ fun TodoItem(task: Task, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
     ) {
-        Checkbox(checked = checked, onCheckedChange = { checked = it })
+        val color = when(task.category) {
+            Category.SAUDE -> Color.Green
+            Category.ESTUDO -> Color.Blue
+            Category.ESPORTE -> Color.Cyan
+            Category.LAZER -> Color.Magenta
+        }
+        Checkbox(
+            checked = checked,
+            onCheckedChange = { checked = it },
+            colors = CheckboxDefaults.colors(
+                uncheckedColor = color,
+                checkedColor = color
+            )
+        )
         Text(
             text = task.description,
             fontSize = 24.sp
@@ -123,13 +185,19 @@ fun TodoItem(task: Task, modifier: Modifier = Modifier) {
 @Preview
 @Composable
 fun PreviewTodoItem() {
-    TodoItem(Task(stringResource(R.string.preview_task_description), true))
+    TodoItem(
+        Task(
+            description = stringResource(R.string.preview_task_description),
+            category = Category.SAUDE,
+            done = true
+        )
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun TodoMainScreenPreview() {
     TodoListTheme {
-        TodoMainScreen()
+        TodoListScaffold()
     }
 }
