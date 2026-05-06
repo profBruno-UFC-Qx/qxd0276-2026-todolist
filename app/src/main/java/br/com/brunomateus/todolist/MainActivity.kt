@@ -18,6 +18,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -43,6 +44,7 @@ import br.com.brunomateus.todolist.model.Task
 import br.com.brunomateus.todolist.model.tasks
 import br.com.brunomateus.todolist.ui.AddTaskDialog
 import br.com.brunomateus.todolist.ui.theme.TodoListTheme
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -177,7 +179,7 @@ fun TodoItem(task: Task, modifier: Modifier = Modifier) {
         )
         Text(
             text = task.description,
-            fontSize = 24.sp
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }
