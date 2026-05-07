@@ -18,8 +18,7 @@ import br.com.brunomateus.todolist.model.tasks
  */
 class TodoState {
     // 1. Estados (Dados)
-    private val _todos = mutableStateListOf(*tasks.toTypedArray())
-    val todos: List<Task> get() = _todos
+    private val todos = mutableStateListOf(*tasks.toTypedArray())
 
     private val _selectedCategories = mutableStateSetOf<String>()
     val selectedCategories: Set<String> get() = _selectedCategories
@@ -30,15 +29,15 @@ class TodoState {
     // 2. Estado Derivado (Lógica de Filtro)
     val filteredTodos by derivedStateOf {
         if (_selectedCategories.isEmpty()) {
-            _todos.toList()
+            todos.toList()
         } else {
-            _todos.filter { it.category.name in _selectedCategories }
+            todos.filter { it.category.name in _selectedCategories }
         }
     }
 
     // 3. Ações (Eventos)
     fun addTask(task: Task) {
-        _todos.add(task)
+        todos.add(task)
         hideDialog()
     }
 
@@ -59,13 +58,10 @@ class TodoState {
         isDialogVisible = false
     }
 
-    fun toggleTaskDone(task: Task, isDone: Boolean) {
-        // Como o Task é um data class, idealmente criaríamos uma cópia
-        // No momento, para manter simples, estamos apenas alterando a propriedade
-        // mas em uma arquitetura completa, o estado seria imutável.
-        val index = _todos.indexOfFirst { it.id == task.id }
+    fun toggleTaskDone(task: Task) {
+        val index = todos.indexOfFirst { it.id == task.id }
         if (index != -1) {
-            _todos[index] = _todos[index].copy(done = isDone)
+            todos[index].done = !todos[index].done
         }
     }
 }

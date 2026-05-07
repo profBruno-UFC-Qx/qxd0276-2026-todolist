@@ -6,19 +6,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -27,13 +21,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import br.com.brunomateus.todolist.model.Category
 import br.com.brunomateus.todolist.model.Task
 import br.com.brunomateus.todolist.ui.AddTaskDialog
+import br.com.brunomateus.todolist.ui.TodoItem
+import br.com.brunomateus.todolist.ui.TodoList
 import br.com.brunomateus.todolist.ui.TodoState
 import br.com.brunomateus.todolist.ui.rememberTodoState
 import br.com.brunomateus.todolist.ui.theme.TodoListTheme
@@ -87,43 +82,14 @@ fun TodoMainScreen(state: TodoState, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        val sizeOfCategories = Category.entries.size
-        MultiChoiceSegmentedButtonRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
-        ) {
-            Category.entries.forEachIndexed { index, category ->
-                val selected = state.selectedCategories.contains(category.name)
-                SegmentedButton(
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = sizeOfCategories
-                    ),
-                    checked = selected,
-                    onCheckedChange = { state.toggleCategory(category) },
-                    label = {
-                        Text(text= category.label )
-                    },
-                    icon = { SegmentedButtonDefaults.Icon(selected) },
-                )
-            }
-        }
-        LazyColumn(
-            horizontalAlignment = Alignment.Start,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(10.dp)
-        ) {
-            items(
-                items = state.filteredTodos,
-                key = { it.id }
-            ) { todo ->
-                TodoItem(
-                    task = todo,
-                    onCheckedChange = { isChecked -> state.toggleTaskDone(todo, isChecked) },
-                    modifier = Modifier.animateItem()
-                )
-            }
-        }
+        CategoryFilter(
+            selectedCategories = state.selectedCategories,
+            onToggleCategory = { category -> state.toggleCategory(category) }
+        )
+        TodoList(
+            items = state.filteredTodos,
+            onTaskDone = { task -> state.toggleTaskDone(task) }
+        )
     }
 
     AnimatedVisibility(visible = state.isDialogVisible) {
@@ -134,36 +100,37 @@ fun TodoMainScreen(state: TodoState, modifier: Modifier = Modifier) {
     }
 }
 
+
 @Composable
-fun TodoItem(
-    task: Task,
-    onCheckedChange: (Boolean) -> Unit,
+fun CategoryFilter(
+    selectedCategories: Set<String>,
+    onToggleCategory: (Category) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
+    val sizeOfCategories = Category.entries.size
+    MultiChoiceSegmentedButtonRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp)
     ) {
-        val color = when(task.category) {
-            Category.SAUDE -> Color.Green
-            Category.ESTUDO -> Color.Blue
-            Category.ESPORTE -> Color.Cyan
-            Category.LAZER -> Color.Magenta
-        }
-        Checkbox(
-            checked = task.done,
-            onCheckedChange = onCheckedChange,
-            colors = CheckboxDefaults.colors(
-                uncheckedColor = color,
-                checkedColor = color
+        Category.entries.forEachIndexed { index, category ->
+            val selected = selectedCategories.contains(category.name)
+            SegmentedButton(
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = sizeOfCategories
+                ),
+                checked = selected,
+                onCheckedChange = { onToggleCategory(category) },
+                label = {
+                    Text(text = category.label)
+                },
+                icon = { SegmentedButtonDefaults.Icon(selected) },
             )
-        )
-        Text(
-            text = task.description,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        }
     }
 }
+
 
 @Preview
 @Composable

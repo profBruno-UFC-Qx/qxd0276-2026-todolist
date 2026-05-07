@@ -25,9 +25,13 @@ import br.com.brunomateus.todolist.model.Category
 import br.com.brunomateus.todolist.model.Task
 
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (task: Task) -> Unit, modifier: Modifier = Modifier) {
+fun AddTaskDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (task: Task) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var taskDescription by remember { mutableStateOf("") }
-    var selectCategory by remember { mutableStateOf("")}
+    var selectCategory by remember { mutableStateOf("") }
 
     AlertDialog(
         title = {
@@ -36,10 +40,14 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (task: Task) -> Unit, modifi
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(Task(
-                    description = taskDescription,
-                    category = Category.valueOf(selectCategory)
-                )) }
+                onClick = {
+                    onConfirm(
+                        Task(
+                            description = taskDescription,
+                            category = Category.valueOf(selectCategory)
+                        )
+                    )
+                }
             ) {
                 Text(text = stringResource(R.string.add_task_confirm))
             }
@@ -68,14 +76,20 @@ fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (task: Task) -> Unit, modifi
                 )
                 Column(modifier = Modifier.selectableGroup()) {
                     for (category in Category.values()) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.
-                        fillMaxWidth().
-                        selectable(
-                            selected = selectCategory == category.toString(),
-                            onClick = { selectCategory = category.toString()},
-                            role = Role.RadioButton
-                        )) {
-                            RadioButton(selected = selectCategory == category.toString() , onClick = null)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = selectCategory == category.toString(),
+                                    onClick = { selectCategory = category.toString() },
+                                    role = Role.RadioButton
+                                )
+                        ) {
+                            RadioButton(
+                                selected = selectCategory == category.toString(),
+                                onClick = null
+                            )
                             Text(text = category.label)
                         }
 
