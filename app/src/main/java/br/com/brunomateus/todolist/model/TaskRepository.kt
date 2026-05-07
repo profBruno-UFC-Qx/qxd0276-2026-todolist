@@ -13,7 +13,7 @@ data class Task(
     val id: UUID = UUID.randomUUID(),
     val description: String,
     val category: Category,
-    var done: Boolean = false
+    val done: Boolean = false
 )
 
 val tasks = listOf(

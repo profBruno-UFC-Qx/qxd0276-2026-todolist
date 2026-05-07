@@ -24,14 +24,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.brunomateus.todolist.model.Category
 import br.com.brunomateus.todolist.model.Task
 import br.com.brunomateus.todolist.ui.AddTaskDialog
 import br.com.brunomateus.todolist.ui.TodoItem
 import br.com.brunomateus.todolist.ui.TodoList
-import br.com.brunomateus.todolist.ui.TodoState
-import br.com.brunomateus.todolist.ui.rememberTodoState
+import br.com.brunomateus.todolist.ui.todo.TodoUiState
 import br.com.brunomateus.todolist.ui.theme.TodoListTheme
+import br.com.brunomateus.todolist.ui.todo.TodoViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -48,16 +49,23 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun TodoListScaffold() {
-    // Agora o estado é centralizado no State Holder
-    val state = rememberTodoState()
+fun TodoListScaffold(
+    viewModel: TodoViewModel = viewModel()
+) {
+    val state = viewModel.uiState
 
     Scaffold(
-        floatingActionButton = { AddTaskFloatingButton(onOpenDialog = { state.showDialog() }) },
+        floatingActionButton = { 
+            AddTaskFloatingButton(onOpenDialog = { viewModel.showDialog() }) 
+        },
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         TodoMainScreen(
             state = state,
+            onToggleCategory = { viewModel.toggleCategory(it) },
+            onToggleTaskDone = { viewModel.toggleTaskDone(it) },
+            onHideDialog = { viewModel.hideDialog() },
+            onAddTask = { viewModel.addTask(it) },
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -77,25 +85,32 @@ fun AddTaskFloatingButton(onOpenDialog: () -> Unit) {
 }
 
 @Composable
-fun TodoMainScreen(state: TodoState, modifier: Modifier = Modifier) {
+fun TodoMainScreen(
+    state: TodoUiState,
+    onToggleCategory: (Category) -> Unit,
+    onToggleTaskDone: (Task) -> Unit,
+    onHideDialog: () -> Unit,
+    onAddTask: (Task) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
         CategoryFilter(
             selectedCategories = state.selectedCategories,
-            onToggleCategory = { category -> state.toggleCategory(category) }
+            onToggleCategory = onToggleCategory
         )
         TodoList(
             items = state.filteredTodos,
-            onTaskDone = { task -> state.toggleTaskDone(task) }
+            onTaskDone = onToggleTaskDone
         )
     }
 
     AnimatedVisibility(visible = state.isDialogVisible) {
         AddTaskDialog(
-            onDismiss = { state.hideDialog() },
-            onConfirm = { task -> state.addTask(task) }
+            onDismiss = onHideDialog,
+            onConfirm = onAddTask
         )
     }
 }
@@ -149,6 +164,12 @@ fun PreviewTodoItem() {
 @Composable
 fun TodoMainScreenPreview() {
     TodoListTheme {
-        TodoListScaffold()
+        TodoMainScreen(
+            state = TodoUiState(),
+            onToggleCategory = {},
+            onToggleTaskDone = {},
+            onHideDialog = {},
+            onAddTask = {}
+        )
     }
 }
