@@ -4,24 +4,31 @@ Este projeto é uma aplicação de lista de tarefas (TodoList) desenvolvida para
 
 ## 🏗️ Arquitetura e Conceitos Abordados
 
-O projeto segue as recomendações oficiais do Android, utilizando uma arquitetura em camadas e o padrão **UDF (Unidirectional Data Flow)**.
+O projeto segue as recomendações oficiais do Android, utilizando uma arquitetura em camadas e o padrão **UDF (Unidirectional Data Flow)** com fluxos reativos.
 
-### 1. ViewModel e Sobrevivência de Estado
-Utilizamos o `TodoViewModel` para gerenciar a lógica de negócio e manter o estado da tela. Por herdar de `ViewModel`, os dados não são perdidos em mudanças de configuração, como a rotação da tela.
+### 1. ViewModel e StateFlow (Reatividade Moderna)
+O gerenciamento de estado evoluiu para utilizar o `StateFlow`. O `StateFlow` é um fluxo de dados observável que mantém o estado da UI de forma reativa e ciente do ciclo de vida, permitindo uma separação clara entre a lógica e a interface.
 
 ```kotlin
 class TodoViewModel : ViewModel() {
-    // O estado é privado para escrita, mas público para leitura
-    var uiState by mutableStateOf(TodoUiState())
-        private set
+    private val _uiState = MutableStateFlow(TodoUiState())
+    val uiState = _uiState.asStateFlow()
 
-    fun addTask(task: Task) { /* ... */ }
-    fun toggleTaskDone(task: Task) { /* ... */ }
+    fun addTask(task: Task) {
+        // Uso do .update para garantir que a atualização seja atômica
+        // O parâmetro 'currentState' garante que trabalhamos com o dado mais recente
+        _uiState.update { currentState ->
+            currentState.copy(
+                todos = currentState.todos + task,
+                isDialogVisible = false
+            )
+        }
+    }
 }
 ```
 
 ### 2. UI State Centralizado (`TodoUiState`)
-Em vez de variáveis de estado espalhadas, utilizamos um único `data class` imutável que representa tudo o que a tela precisa exibir. Isso torna o estado da aplicação previsível e fácil de depurar.
+Todo o estado necessário para renderizar a tela é consolidado em um único `data class` imutável. Isso torna o estado da aplicação previsível, fácil de testar e depurar.
 
 ```kotlin
 data class TodoUiState(
@@ -29,51 +36,55 @@ data class TodoUiState(
     val selectedCategories: Set<String> = emptySet(),
     val isDialogVisible: Boolean = false
 ) {
-    // Lógica de filtro derivada (propriedade calculada)
-    val filteredTodos: List<Task> get() = /* lógica de filtro */
+    // Propriedade calculada: a filtragem acontece de forma reativa
+    val filteredTodos: List<Task> get() = if (selectedCategories.isEmpty()) todos else todos.filter { it.category.name in selectedCategories }
 }
 ```
 
-### 3. Imutabilidade e Recomposição Eficiente
-Para que o Compose detecte mudanças de forma otimizada, o modelo `Task` é imutável. Quando uma tarefa é alterada (ex: marcada como concluída), criamos uma nova instância da lista e da tarefa usando o método `.copy()`.
-
-```kotlin
-// Exemplo de atualização imutável no ViewModel
-val updatedTodos = uiState.todos.map {
-    if (it.id == task.id) it.copy(done = !it.done) else it
-}
-uiState = uiState.copy(todos = updatedTodos)
-```
-
-### 4. State Hoisting (Elevação de Estado)
-Os componentes de UI (Composables) são, em sua maioria, **stateless**. Eles não gerenciam estado; apenas recebem os dados para exibição e notificam eventos através de lambdas.
+### 3. Coleta de Estado com `collectAsStateWithLifecycle`
+Na camada de UI, consumimos o estado utilizando a biblioteca de ciclo de vida do Android. Isso garante que a coleta de dados seja interrompida quando o aplicativo vai para o segundo plano, otimizando o consumo de bateria e processamento.
 
 ```kotlin
 @Composable
-fun TodoList(
-    items: List<Task>, 
-    onTaskDone: (Task) -> Unit // Evento elevado para o ViewModel
-) {
-    // ...
+fun TodoListScaffold(viewModel: TodoViewModel = viewModel()) {
+    // Coleta o estado de forma segura e eficiente
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    
+    TodoMainScreen(state = state, ...)
+}
+```
+
+### 4. Imutabilidade e Performance
+Para que o Compose identifique as mudanças de estado corretamente, mantemos nossos modelos imutáveis (`val`). Sempre que uma tarefa é alterada, o `ViewModel` emite um novo objeto de estado com a lista atualizada através do método `.copy()`.
+
+```kotlin
+fun toggleTaskDone(task: Task) {
+    _uiState.update { currentState ->
+        val updatedTodos = currentState.todos.map {
+            if (it.id == task.id) it.copy(done = !it.done) else it
+        }
+        currentState.copy(todos = updatedTodos)
+    }
 }
 ```
 
 ### 5. Otimizações de UI e Recursos
-*   **LazyColumn com Keys**: Utilizamos `key = { it.id }` para que o Compose identifique itens de forma única, permitindo animações fluidas e melhor performance.
+*   **LazyColumn com Keys**: Utilizamos `key = { it.id }` para garantir performance e animações corretas.
 *   **Recursos Externos**: Todas as strings estão localizadas em `strings.xml`, seguindo as boas práticas de internacionalização e manutenção.
+*   **State Hoisting**: Os componentes de UI recebem apenas os dados necessários e notificam mudanças via lambdas, permanecendo testáveis e reutilizáveis (stateless).
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-*   **Kotlin**: `data classes`, `enums`, `UUID` e `Imutabilidade`.
-*   **Jetpack Compose**: UI declarativa e `Stateless Composables`.
-*   **Material 3**: Design system moderno (`Scaffold`, `SegmentedButton`).
+*   **Kotlin Coroutines & Flow**: Gerenciamento de estado reativo com `StateFlow`.
+*   **Jetpack Compose**: UI declarativa com consumo de estado via Lifecycle.
+*   **Material 3**: Design system moderno.
 *   **Android Architecture Components**: `ViewModel` e `Lifecycle`.
 
 ## 📖 Como usar este repositório para estudo
 
-Este projeto demonstra como estruturar uma aplicação real:
-1.  O **Estado** (UiState) "desce" do ViewModel para os componentes.
-2.  Os **Eventos** "sobem" dos componentes para o ViewModel através de callbacks.
-3.  A lógica de filtro e regras de negócio ficam protegidas dentro do ViewModel, longe da camada de visualização.
+Este projeto demonstra a maturidade da arquitetura Android:
+1.  **O Estado Desce**: O `UiState` flui do ViewModel para a UI.
+2.  **Os Eventos Sobem**: A UI notifica o ViewModel sobre ações do usuário via lambdas.
+3.  **Segurança**: O uso de imutabilidade e fluxos reativos previne bugs comuns de concorrência e inconsistência de dados.
